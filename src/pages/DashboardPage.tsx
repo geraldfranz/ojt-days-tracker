@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { Check, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOjtStore } from "../store/useOjtStore";
+import type { SpecialDate } from "../store/useOjtStore";
 import { getToday, dateKey, displayDate } from "../lib/date";
 import {
   calculateAbsentDays,
@@ -24,7 +25,7 @@ function calculateExpectedCompletionDate(
   startDate: string,
   requiredDays: number,
   workingDays: string[],
-  specialDates: { date: string }[],
+  specialDates: SpecialDate[],
 ) {
   if (!startDate || requiredDays <= 0 || !workingDays.length) return null;
   const cursor = new Date(`${startDate}T12:00:00`);
