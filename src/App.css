@@ -121,7 +121,7 @@
 }
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 18px;
 }
@@ -169,6 +169,10 @@
 .stat-card small {
   font-size: 11px;
   color: #808981;
+}
+.expected-date-card strong {
+  font-size: 22px;
+  line-height: 1.2;
 }
 .dashboard-grid {
   display: grid;
@@ -834,6 +838,21 @@ textarea {
 .bottom-nav {
   display: none;
 }
+@media (min-width: 761px) and (max-width: 1080px) {
+  .main-content {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 760px) {
   .sidebar {
     display: none;
@@ -861,7 +880,7 @@ textarea {
   .banner-sun {
     font-size: 75px;
   }
-  .stats-grid {
+.stats-grid {
     gap: 8px;
   }
   .stat-card {
@@ -963,6 +982,66 @@ textarea {
   }
   .calendar-top h2 {
     font-size: 18px;
+  }
+}
+
+@media (max-width: 520px) {
+  .main-content {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+  }
+
+  .page-header h1 {
+    font-size: 24px;
+  }
+
+  .welcome-banner {
+    padding: 19px 17px;
+  }
+
+  .welcome-banner h2 {
+    font-size: 18px;
+  }
+
+  .welcome-banner p {
+    max-width: 240px;
+    line-height: 1.45;
+  }
+
+  .banner-sun {
+    font-size: 58px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .expected-date-card strong {
+    font-size: 24px;
+  }
+
+  .summary-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .summary-row > div {
+    justify-content: flex-start;
+    border-right: 0;
+    border-bottom: 1px solid #edf0eb;
+    padding: 11px 4px;
+  }
+
+  .summary-row > div:last-child {
+    border-bottom: 0;
+  }
+
+  .modal {
+    padding: 20px;
   }
 }
 
@@ -1252,6 +1331,21 @@ textarea {
 .dark-theme .confirm-icon {
   background: #4b2c29;
 }
+@media (min-width: 761px) and (max-width: 1080px) {
+  .main-content {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 @media (max-width: 760px) {
   .app-shell {
     width: 100%;
@@ -1277,7 +1371,7 @@ textarea {
     font-size: 64px;
     margin-top: 3px;
   }
-  .stats-grid {
+.stats-grid {
     min-width: 0;
   }
   .stat-card {

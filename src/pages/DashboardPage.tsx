@@ -8,6 +8,8 @@ import {
   calculateCompletedDays,
   calculateTotalHoursLogged,
   isValidAttendanceDate,
+  isExcusedDate,
+  isWorkingDay,
 } from "../lib/ojtCalculations";
 import { Header } from "../components/layout/Header";
 import { StatCard } from "../components/dashboard/StatCard";
@@ -16,6 +18,26 @@ function getGreeting(hour: number) {
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
   return "Good evening";
+}
+
+function calculateExpectedCompletionDate(
+  startDate: string,
+  requiredDays: number,
+  workingDays: string[],
+  specialDates: { date: string }[],
+) {
+  if (!startDate || requiredDays <= 0 || !workingDays.length) return null;
+  const cursor = new Date(`${startDate}T12:00:00`);
+  if (Number.isNaN(cursor.getTime())) return null;
+  let countedDays = 0;
+  for (let guard = 0; guard < 3660; guard += 1) {
+    if (isWorkingDay(cursor, workingDays) && !isExcusedDate(cursor, specialDates)) {
+      countedDays += 1;
+      if (countedDays >= requiredDays) return cursor;
+    }
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return null;
 }
 
 export function DashboardPage() {
@@ -69,6 +91,16 @@ export function DashboardPage() {
       ? Math.min(100, Math.max(0, (totalHoursLogged / totalRequiredDays) * 100))
       : 0,
   );
+  const expectedCompletionDate = useMemo(
+    () =>
+      calculateExpectedCompletionDate(
+        startDate,
+        requiredDays,
+        workingDays,
+        specialDates,
+      ),
+    [startDate, requiredDays, workingDays, specialDates],
+  );
   const presentToday = attendanceRecords.some(
     (record) =>
       record.date === dateKey(today) &&
@@ -118,6 +150,22 @@ export function DashboardPage() {
           detail="hours to go"
           tone="blue"
         />
+        <div className="stat-card blue expected-date-card">
+          <div className="stat-top">
+            EXPECTED COMPLETION
+            <i />
+          </div>
+          <strong>
+            {expectedCompletionDate
+              ? new Intl.DateTimeFormat("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }).format(expectedCompletionDate)
+              : "—"}
+          </strong>
+          <small>estimated finish date</small>
+        </div>
       </div>
       <div className="dashboard-grid">
         <section className="panel">
