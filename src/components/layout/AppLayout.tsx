@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { useOjtStore } from "../../store/useOjtStore";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -17,7 +16,6 @@ const nav = [
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 export function AppLayout({ children }: { children: ReactNode }) {
-  const userName = useOjtStore((state) => state.userName);
   const [darkMode, setDarkMode] = useState(
     () => localStorage.getItem("ojt-theme") === "dark",
   );
@@ -38,43 +36,20 @@ export function AppLayout({ children }: { children: ReactNode }) {
           OJT days
         </div>
         <nav>{links()}</nav>
-        <div className="sidebar-foot">
-          <span className="avatar">{(userName || "?").charAt(0).toUpperCase()}</span>
-          <div>
-            <strong>{userName || "Trainee"}</strong>
-            <small>Internship 2026</small>
-          </div>
-          <button
-            className="theme-toggle"
-            onClick={() => {
-              const nextMode = !darkMode;
-              setDarkMode(nextMode);
-              localStorage.setItem("ojt-theme", nextMode ? "dark" : "light");
-            }}
-            aria-label={
-              darkMode ? "Switch to light mode" : "Switch to dark mode"
-            }
-            title={darkMode ? "Light mode" : "Dark mode"}
-          >
-            {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-        </div>
       </aside>
-      <main className="main-content">
-        <button
-          className="theme-toggle mobile-theme-toggle"
-          onClick={() => {
-            const nextMode = !darkMode;
-            setDarkMode(nextMode);
-            localStorage.setItem("ojt-theme", nextMode ? "dark" : "light");
-          }}
-          aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-          title={darkMode ? "Light mode" : "Dark mode"}
-        >
-          {darkMode ? <Sun size={16} /> : <Moon size={16} />}
-        </button>
-        {children}
-      </main>
+      <button
+        className="theme-toggle top-right-theme-toggle"
+        onClick={() => {
+          const nextMode = !darkMode;
+          setDarkMode(nextMode);
+          localStorage.setItem("ojt-theme", nextMode ? "dark" : "light");
+        }}
+        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+        title={darkMode ? "Light mode" : "Dark mode"}
+      >
+        {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+      </button>
+      <main className="main-content">{children}</main>
       <nav className="bottom-nav">{links(true)}</nav>
     </div>
   );

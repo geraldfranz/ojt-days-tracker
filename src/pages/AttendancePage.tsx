@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { useOjtStore } from "../store/useOjtStore";
 import { getToday, dateKey } from "../lib/date";
@@ -9,10 +9,14 @@ import {
 } from "../lib/ojtCalculations";
 import { Header } from "../components/layout/Header";
 import { AttendanceCalendar } from "../components/attendance/AttendanceCalendar";
-import { AttendanceDialog } from "../components/attendance/AttendanceDialog";
+import {
+  AttendanceDialog,
+  type EntryType,
+} from "../components/attendance/AttendanceDialog";
 export function AttendancePage() {
   const {
     attendanceRecords,
+    specialDates,
     totalRequiredDays,
     hoursPerDay,
     startDate,
@@ -20,6 +24,9 @@ export function AttendancePage() {
     addAttendance,
     updateAttendance,
     removeAttendance,
+    setSpecialDate,
+    removeSpecialDate,
+    ensureHolidaysSeeded,
   } = useOjtStore();
   const today = getToday();
   const requiredDays = totalRequiredDays / hoursPerDay;
@@ -27,11 +34,18 @@ export function AttendancePage() {
     () => new Date(today.getFullYear(), today.getMonth(), 1),
   );
   const [selected, setSelected] = useState<string | null>(null);
+  const [entryType, setEntryType] = useState<EntryType>("present");
   const [notes, setNotes] = useState("");
   const [hoursLogged, setHoursLogged] = useState(hoursPerDay);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const existing = attendanceRecords.find((record) => record.date === selected);
+  const existingSpecial = specialDates.find((item) => item.date === selected);
+
+  // Make sure PH regular holidays exist for whichever year is being viewed.
+  useEffect(() => {
+    ensureHolidaysSeeded(month.getFullYear());
+  }, [month, ensureHolidaysSeeded]);
 
   // Memoized so the same derived values aren't recomputed on every
   // access within a single render.
@@ -57,13 +71,26 @@ export function AttendancePage() {
     const existingRecord = attendanceRecords.find(
       (record) => record.date === value,
     );
+    const existingSpecialForDate = specialDates.find(
+      (item) => item.date === value,
+    );
     setError("");
     setSelected(value);
-    setNotes(existingRecord?.notes || "");
+    setNotes(existingRecord?.notes || existingSpecialForDate?.label || "");
     setHoursLogged(existingRecord?.hoursLogged ?? hoursPerDay);
+    setEntryType(
+      existingSpecialForDate ? existingSpecialForDate.type : "present",
+    );
   };
   const save = () => {
     if (!selected) return;
+
+    if (entryType !== "present") {
+      setSpecialDate(selected, entryType, notes);
+      setSelected(null);
+      return;
+    }
+
     if (
       !existing &&
       !isValidAttendanceDate(selected, startDate, workingDays, today)
@@ -84,6 +111,14 @@ export function AttendancePage() {
     }
     setSelected(null);
   };
+  const remove = () => {
+    if (existing) {
+      setDeleteId(existing.id);
+    } else if (existingSpecial) {
+      removeSpecialDate(existingSpecial.id);
+      setSelected(null);
+    }
+  };
   return (
     <div className="page">
       <Header
@@ -103,6 +138,7 @@ export function AttendancePage() {
         month={month}
         setMonth={setMonth}
         presentDates={attendanceRecords.map((record) => record.date)}
+        specialDates={specialDates}
         onSelect={select}
         startDate={startDate}
         workingDays={workingDays}
@@ -113,7 +149,10 @@ export function AttendancePage() {
         <span className="tip-icon">✦</span>
         <div>
           <strong>Nice and steady</strong>
-          <p>Tap any date to add or update your attendance.</p>
+          <p>
+            Tap any date to add or update your attendance, or mark it as a
+            holiday/suspension.
+          </p>
         </div>
       </section>
       {error && (
@@ -125,13 +164,16 @@ export function AttendancePage() {
         <AttendanceDialog
           selected={selected}
           existing={existing}
+          entryType={entryType}
+          setEntryType={setEntryType}
           notes={notes}
           setNotes={setNotes}
           hoursLogged={hoursLogged}
           setHoursLogged={setHoursLogged}
+          hasExistingEntry={Boolean(existing || existingSpecial)}
           onClose={() => setSelected(null)}
           onSave={save}
-          onRemove={() => existing && setDeleteId(existing.id)}
+          onRemove={remove}
         />
       )}
       {deleteId && (

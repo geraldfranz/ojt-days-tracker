@@ -1,8 +1,8 @@
-import { useState } from "react";
-import { Check, RotateCcw, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, CloudRain, Flag, RotateCcw, Trash2, X } from "lucide-react";
 import { useOjtStore } from "../store/useOjtStore";
 import { Header } from "../components/layout/Header";
-import { DEFAULT_START_DATE, isValidDateKey } from "../lib/date";
+import { DEFAULT_START_DATE, displayDate, getToday, isValidDateKey } from "../lib/date";
 const week = [
   "Monday",
   "Tuesday",
@@ -19,9 +19,26 @@ export function SettingsPage() {
     hoursPerDay,
     startDate,
     workingDays,
+    specialDates,
     updateSettings,
     resetData,
+    setSpecialDate,
+    removeSpecialDate,
+    ensureHolidaysSeeded,
   } = useOjtStore();
+  const today = getToday();
+  useEffect(() => {
+    ensureHolidaysSeeded(today.getFullYear());
+    ensureHolidaysSeeded(today.getFullYear() + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ensureHolidaysSeeded]);
+  const [newDate, setNewDate] = useState("");
+  const [newType, setNewType] = useState<"holiday" | "suspended">("holiday");
+  const [newLabel, setNewLabel] = useState("");
+  const [specialError, setSpecialError] = useState("");
+  const sortedSpecialDates = [...specialDates].sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
   const [name, setName] = useState(userName);
   const [hours, setHours] = useState(String(totalRequiredDays));
   const [hoursPerDayLocal, setHoursPerDayLocal] = useState(String(hoursPerDay));
@@ -62,6 +79,16 @@ export function SettingsPage() {
     });
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1600);
+  };
+  const addSpecial = () => {
+    if (!isValidDateKey(newDate)) {
+      setSpecialError("Please choose a valid date.");
+      return;
+    }
+    setSpecialError("");
+    setSpecialDate(newDate, newType, newLabel);
+    setNewDate("");
+    setNewLabel("");
   };
   return (
     <div className="page">
@@ -142,6 +169,91 @@ export function SettingsPage() {
           <Check size={17} />
           {saved ? "Changes saved" : "Save changes"}
         </button>
+      </section>
+      <section className="settings-section">
+        <div className="section-title">
+          <div>
+            <p className="eyebrow">CALENDAR</p>
+            <h2>Holidays &amp; suspensions</h2>
+          </div>
+          <p>
+            Regular Philippine holidays are added automatically. Add local
+            holidays or storm/emergency suspensions here — these days won't
+            count toward your total absences.
+          </p>
+        </div>
+        <div className="settings-form">
+          <label className="input-wrap">
+            <span>Date</span>
+            <input
+              type="date"
+              value={newDate}
+              onChange={(event) => setNewDate(event.target.value)}
+            />
+          </label>
+          <label className="input-wrap">
+            <span>Type</span>
+            <select
+              value={newType}
+              onChange={(event) =>
+                setNewType(event.target.value as "holiday" | "suspended")
+              }
+            >
+              <option value="holiday">Holiday</option>
+              <option value="suspended">Suspended (bagyo/emergency)</option>
+            </select>
+          </label>
+          <label className="input-wrap">
+            <span>
+              Label <span>Optional</span>
+            </span>
+            <input
+              type="text"
+              maxLength={80}
+              placeholder="e.g. Typhoon Something"
+              value={newLabel}
+              onChange={(event) => setNewLabel(event.target.value)}
+            />
+          </label>
+        </div>
+        {specialError && (
+          <p className="form-error" role="alert">
+            {specialError}
+          </p>
+        )}
+        <button
+          className="button secondary add-holiday-button"
+          onClick={addSpecial}
+        >
+          Add to calendar
+        </button>
+        <ul className="special-dates-list">
+          {sortedSpecialDates.length === 0 && (
+            <li className="special-dates-empty">No holidays added yet.</li>
+          )}
+          {sortedSpecialDates.map((item) => (
+            <li key={item.id} className={`special-date-row ${item.type}`}>
+              <span className="special-date-icon">
+                {item.type === "holiday" ? (
+                  <Flag size={14} />
+                ) : (
+                  <CloudRain size={14} />
+                )}
+              </span>
+              <span className="special-date-info">
+                <strong>{displayDate(item.date, { month: "short", day: "numeric" })}</strong>
+                <small>{item.label || (item.type === "holiday" ? "Holiday" : "Suspended")}</small>
+              </span>
+              <button
+                className="icon-button subtle"
+                onClick={() => removeSpecialDate(item.id)}
+                aria-label={`Remove ${item.label || item.type}`}
+              >
+                <X size={15} />
+              </button>
+            </li>
+          ))}
+        </ul>
       </section>
       <section className="danger-section">
         <div>

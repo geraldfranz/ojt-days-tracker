@@ -6,6 +6,7 @@ import {
   isValidDateKey,
   getToday,
 } from "../lib/date";
+import { getPhRegularHolidays } from "../lib/phHolidays";
 
 export interface AttendanceRecord {
   id: string;
@@ -15,6 +16,16 @@ export interface AttendanceRecord {
   notes?: string;
 }
 
+export type SpecialDateType = "holiday" | "suspended";
+
+export interface SpecialDate {
+  id: string;
+  date: string;
+  type: SpecialDateType;
+  label?: string;
+  auto?: boolean; // true = auto-seeded from the PH regular holiday list
+}
+
 interface OjtState {
   userName: string;
   totalRequiredDays: number;
@@ -22,9 +33,18 @@ interface OjtState {
   startDate: string;
   workingDays: string[];
   attendanceRecords: AttendanceRecord[];
+  specialDates: SpecialDate[];
+  seededHolidayYears: number[];
   addAttendance: (record: Omit<AttendanceRecord, "id">) => void;
   updateAttendance: (id: string, data: Partial<AttendanceRecord>) => void;
   removeAttendance: (id: string) => void;
+  setSpecialDate: (
+    date: string,
+    type: SpecialDateType,
+    label?: string,
+  ) => void;
+  removeSpecialDate: (id: string) => void;
+  ensureHolidaysSeeded: (year: number) => void;
   updateSettings: (
     settings: Pick<
       OjtState,
@@ -63,11 +83,13 @@ const initialState = {
     },
     { id: "4", date: mockDate(1), status: "present" as const, hoursLogged: 8 },
   ],
+  specialDates: [] as SpecialDate[],
+  seededHolidayYears: [] as number[],
 };
 
 export const useOjtStore = create<OjtState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialState,
       addAttendance: (record) =>
         set((state) =>
@@ -87,6 +109,10 @@ export const useOjtStore = create<OjtState>()(
                     notes: record.notes?.slice(0, 500),
                   },
                 ],
+                // A day can't be both "present" and a holiday/suspension.
+                specialDates: state.specialDates.filter(
+                  (item) => item.date !== record.date,
+                ),
               },
         ),
       updateAttendance: (id, data) =>
@@ -125,6 +151,53 @@ export const useOjtStore = create<OjtState>()(
             (record) => record.id !== id,
           ),
         })),
+      setSpecialDate: (date, type, label) =>
+        set((state) => {
+          if (!isValidDateKey(date)) return state;
+          const others = state.specialDates.filter((item) => item.date !== date);
+          const existing = state.specialDates.find((item) => item.date === date);
+          return {
+            specialDates: [
+              ...others,
+              {
+                id: existing?.id ?? crypto.randomUUID(),
+                date,
+                type,
+                label: label?.trim().slice(0, 80) || undefined,
+                auto: existing?.auto && existing.type === type ? existing.auto : false,
+              },
+            ],
+            // A holiday/suspension day can't also be a "present" record.
+            attendanceRecords: state.attendanceRecords.filter(
+              (record) => record.date !== date,
+            ),
+          };
+        }),
+      removeSpecialDate: (id) =>
+        set((state) => ({
+          specialDates: state.specialDates.filter((item) => item.id !== id),
+        })),
+      ensureHolidaysSeeded: (year) => {
+        const state = get();
+        if (state.seededHolidayYears.includes(year)) return;
+        const seeds = getPhRegularHolidays(year);
+        set((current) => {
+          const existingDates = new Set(current.specialDates.map((d) => d.date));
+          const additions: SpecialDate[] = seeds
+            .filter((seed) => !existingDates.has(seed.date))
+            .map((seed) => ({
+              id: crypto.randomUUID(),
+              date: seed.date,
+              type: "holiday" as const,
+              label: seed.label,
+              auto: true,
+            }));
+          return {
+            specialDates: [...current.specialDates, ...additions],
+            seededHolidayYears: [...current.seededHolidayYears, year],
+          };
+        });
+      },
       updateSettings: (settings) =>
         set({
           userName: settings.userName.trim().slice(0, 60),
@@ -154,6 +227,8 @@ export const useOjtStore = create<OjtState>()(
               8,
           }));
         }
+        if (!state.specialDates) state.specialDates = [];
+        if (!state.seededHolidayYears) state.seededHolidayYears = [];
         return state;
       },
       partialize: (state) => ({
@@ -163,6 +238,8 @@ export const useOjtStore = create<OjtState>()(
         startDate: state.startDate,
         workingDays: state.workingDays,
         attendanceRecords: state.attendanceRecords,
+        specialDates: state.specialDates,
+        seededHolidayYears: state.seededHolidayYears,
       }),
     },
   ),

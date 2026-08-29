@@ -1,4 +1,4 @@
-import type { AttendanceRecord } from "../store/useOjtStore";
+import type { AttendanceRecord, SpecialDate } from "../store/useOjtStore";
 import { dateKey } from "./date";
 
 const dayNames = [
@@ -22,6 +22,8 @@ const hasAttendance = (records: AttendanceRecord[], date: Date) =>
   records.some(
     (record) => record.status === "present" && record.date === dateKey(date),
   );
+export const isExcusedDate = (date: Date, specialDates: SpecialDate[] = []) =>
+  specialDates.some((item) => item.date === dateKey(date));
 
 export function isValidAttendanceDate(
   value: string,
@@ -125,6 +127,7 @@ export function calculateAbsentDays(
   startDate: string,
   workingDays: string[],
   today = new Date(),
+  specialDates: SpecialDate[] = [],
 ) {
   const start = parseDate(startDate);
   if (!start || !workingDays.length) return 0;
@@ -140,7 +143,11 @@ export function calculateAbsentDays(
   // Exclusive of today: a working day that hasn't finished yet
   // shouldn't be counted as a missed/absent day.
   while (cursor < end) {
-    if (isWorkingDay(cursor, workingDays) && !hasAttendance(validRecords, cursor)) {
+    if (
+      isWorkingDay(cursor, workingDays) &&
+      !isExcusedDate(cursor, specialDates) &&
+      !hasAttendance(validRecords, cursor)
+    ) {
       absent += 1;
     }
     cursor.setDate(cursor.getDate() + 1);
@@ -153,6 +160,7 @@ export function calculateCurrentStreak(
   workingDays: string[],
   startDate?: string,
   today = new Date(),
+  specialDates: SpecialDate[] = [],
 ) {
   if (!workingDays.length) return 0;
   const validRecords = validAttendanceRecords(
@@ -164,7 +172,7 @@ export function calculateCurrentStreak(
   const cursor = dayStart(today);
   let streak = 0;
   for (let guard = 0; guard < 370; guard += 1) {
-    if (isWorkingDay(cursor, workingDays)) {
+    if (isWorkingDay(cursor, workingDays) && !isExcusedDate(cursor, specialDates)) {
       if (!hasAttendance(validRecords, cursor)) break;
       streak += 1;
     }
@@ -178,6 +186,7 @@ export function calculateWeeklyConsistency(
   workingDays: string[],
   startDate?: string,
   today = new Date(),
+  specialDates: SpecialDate[] = [],
 ) {
   if (!workingDays.length) return 0;
   const cursor = dayStart(today);
@@ -201,7 +210,8 @@ export function calculateWeeklyConsistency(
         startDate ?? "0000-01-01",
         workingDays,
         today,
-      )
+      ) &&
+      !isExcusedDate(date, specialDates)
     ) {
       expected += 1;
       if (hasAttendance(validRecords, date)) present += 1;

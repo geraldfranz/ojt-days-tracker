@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Check, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOjtStore } from "../store/useOjtStore";
@@ -26,8 +26,15 @@ export function DashboardPage() {
     startDate,
     workingDays,
     attendanceRecords,
+    specialDates,
+    ensureHolidaysSeeded,
   } = useOjtStore();
   const today = getToday();
+  useEffect(() => {
+    ensureHolidaysSeeded(today.getFullYear());
+    ensureHolidaysSeeded(today.getFullYear() + 1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ensureHolidaysSeeded]);
   const requiredDays = totalRequiredDays / hoursPerDay;
   const completed = useMemo(
     () =>
@@ -46,8 +53,15 @@ export function DashboardPage() {
     [attendanceRecords, startDate, workingDays, today],
   );
   const absentDays = useMemo(
-    () => calculateAbsentDays(attendanceRecords, startDate, workingDays, today),
-    [attendanceRecords, startDate, workingDays, today],
+    () =>
+      calculateAbsentDays(
+        attendanceRecords,
+        startDate,
+        workingDays,
+        today,
+        specialDates,
+      ),
+    [attendanceRecords, startDate, workingDays, today, specialDates],
   );
   const remainingHours = Math.max(0, totalRequiredDays - totalHoursLogged);
   const progress = Math.round(
