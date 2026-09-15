@@ -172,7 +172,10 @@ export function calculateCurrentStreak(
   const cursor = dayStart(today);
   let streak = 0;
   for (let guard = 0; guard < 370; guard += 1) {
-    if (isWorkingDay(cursor, workingDays) && !isExcusedDate(cursor, specialDates)) {
+    if (
+      isWorkingDay(cursor, workingDays) &&
+      !isExcusedDate(cursor, specialDates)
+    ) {
       if (!hasAttendance(validRecords, cursor)) break;
       streak += 1;
     }
